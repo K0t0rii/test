@@ -6,8 +6,28 @@ module.exports = {
 // This is the name of the action displayed in the editor.
 //---------------------------------------------------------------------
 
-name: "Generate Random Hex Color",
+name: "Edit Channel",
+//Changed by Lasse in 1.8.7 from "Edit channel" to "Edit Channel"
 
+//---------------------------------------------------------------------
+// Action Section
+//
+// This is the section the action will fall into.
+//---------------------------------------------------------------------
+
+section: "Channel Control",
+
+//---------------------------------------------------------------------
+// Action Subtitle
+//
+// This function generates the subtitle displayed next to the name.
+//---------------------------------------------------------------------
+
+subtitle: function(data) {
+	const names = ['Same Channel', 'Mentioned Channel', 'Default Channel', 'Temp Variable', 'Server Variable', 'Global Variable'];
+	const index = parseInt(data.storage);
+	return index < 3 ? `${names[index]}` : `${names[index]} - ${data.varName}`;
+},
 
 //---------------------------------------------------------------------
 	 // DBM Mods Manager Variables (Optional but nice to have!)
@@ -17,43 +37,19 @@ name: "Generate Random Hex Color",
 	 //---------------------------------------------------------------------
 
 	 // Who made the mod (If not set, defaults to "DBM Mods")
-	 author: "Jakob",
+	 author: "Lasse",
 
 	 // The version of the mod (Defaults to 1.0.0)
-	 version: "1.8.6", // Added in 1.8.6
+	 version: "1.8.7", //Added in 1.8.2
 
 	 // A short description to show on the mod line for this mod (Must be on a single line)
-	 short_description: "Generates a random hex color code",
+	 short_description: "Edits a specific channel",
 
-//---------------------------------------------------------------------
-// Action Section
-//
-// This is the section the action will fall into.
-//---------------------------------------------------------------------
+	 // If it depends on any other mods by name, ex: WrexMODS if the mod uses something from WrexMods
 
-section: "Other Stuff",
 
-//---------------------------------------------------------------------
-// Action Subtitle
-//
-// This function generates the subtitle displayed next to the name.
-//---------------------------------------------------------------------
+	 //---------------------------------------------------------------------
 
-subtitle: function(data) {
-	return `Generates random hex color code`;
-},
-
-//---------------------------------------------------------------------
-// Action Storage Function
-//
-// Stores the relevant variable info for the editor.
-//---------------------------------------------------------------------
-
-variableStorage: function(data, varType) {
-	const type = parseInt(data.storage);
-	if(type !== varType) return;
-	return ([data.varName, 'Color Code']);
-},
 
 //---------------------------------------------------------------------
 // Action Fields
@@ -63,7 +59,7 @@ variableStorage: function(data, varType) {
 // are also the names of the fields stored in the action's JSON data.
 //---------------------------------------------------------------------
 
-fields: ["storage", "varName"],
+fields: ["storage", "varName", "toChange", "newState"],
 
 //---------------------------------------------------------------------
 // Command HTML
@@ -83,22 +79,40 @@ fields: ["storage", "varName"],
 
 html: function(isEvent, data) {
 	return `
-</div>
+	<div>
 		<p>
 			<u>Mod Info:</u><br>
-			Created by Jakob!
+			Created by Lasse!
 		</p>
 	</div><br>
 <div>
 	<div style="float: left; width: 35%;">
-		Store In:<br>
-		<select id="storage" class="round" onchange="glob.variableChange(this, 'varNameContainer')">
-			${data.variables[0]}
+		Source Channel:<br>
+		<select id="storage" class="round" onchange="glob.channelChange(this, 'varNameContainer')">
+			${data.channels[isEvent ? 1 : 0]}
 		</select>
 	</div>
 	<div id="varNameContainer" style="display: none; float: right; width: 60%;">
 		Variable Name:<br>
-		<input id="varName" class="round" type="text">
+		<input id="varName" class="round" type="text" list="variableList"><br>
+	</div>
+</div><br><br><br>
+<div>
+	<div style="float: left; width: 35%;">
+		Change:<br>
+		<select id="toChange" class="round">
+			<option value="name">Name</option>
+			<option value="topic">Topic</option>
+    	<option value="position">Position</option>
+    	<option value="bitrate">Bitrate</option>
+    	<option value="userLimit">User Limit</option>
+			<option value="parent">Category ID</option>
+		</select>
+	</div><br>
+<div>
+	<div style="float: left; width: 80%;">
+		Change to:<br>
+		<input id="newState" class="round" type="text"><br>
 	</div>
 </div>`
 },
@@ -114,7 +128,7 @@ html: function(isEvent, data) {
 init: function() {
 	const {glob, document} = this;
 
-	glob.variableChange(document.getElementById('storage'), 'varNameContainer');
+	glob.channelChange(document.getElementById('storage'), 'varNameContainer');
 },
 
 //---------------------------------------------------------------------
@@ -127,12 +141,30 @@ init: function() {
 
 action: function(cache) {
 	const data = cache.actions[cache.index];
-	const type = parseInt(data.storage);
+	const storage = parseInt(data.storage);
 	const varName = this.evalMessage(data.varName, cache);
-	const code = "000000".replace(/0/g,function(){return (~~(Math.random()*16)).toString(16);});
-	this.storeValue('#' + code, type, varName, cache);
+	const channel = this.getChannel(storage, varName, cache);
+	const toChange = parseInt(data.toChange);
+	const newState = this.evalMessage(data.newState, cache);
+	//const reason = parseInt(data.reason);
+	if(data.toChange === "topic") {
+		channel.edit({topic: newState});
+	} else if(data.toChange === "name") {
+		channel.edit({name: newState});
+	} else if(data.toChange === "position") {
+		channel.edit({position: newState});
+	} else if(data.toChange === "bitrate") {
+		channel.edit({bitrate: newState});
+	} else if(data.toChange === "userLimit") {
+		channel.edit({userLimit: newState});
+	} else if(data.toChange === "parent") {
+		channel.setParent(newState); //Added by Lasse in 1.8.7
+	} else {
+		console.log('This should never been shown!');
+	}
 	this.callNextAction(cache);
 },
+
 //---------------------------------------------------------------------
 // Action Bot Mod
 //
@@ -142,6 +174,10 @@ action: function(cache) {
 // functions you wish to overwrite.
 //---------------------------------------------------------------------
 
-mod: function(DBM) {}
+mod: function(DBM) {
+	// aliases for backwards compatibility, in the bot only, DBM will still say the action is missing.
+	DBM.Actions["Edit channel"] = DBM.Actions["Edit Channel"];
+	//Thank You Wrex!
+}
 
 }; // End of module

@@ -6,24 +6,7 @@ module.exports = {
 // This is the name of the action displayed in the editor.
 //---------------------------------------------------------------------
 
-name: "Generate Random Hex Color",
-
-
-//---------------------------------------------------------------------
-	 // DBM Mods Manager Variables (Optional but nice to have!)
-	 //
-	 // These are variables that DBM Mods Manager uses to show information
-	 // about the mods for people to see in the list.
-	 //---------------------------------------------------------------------
-
-	 // Who made the mod (If not set, defaults to "DBM Mods")
-	 author: "Jakob",
-
-	 // The version of the mod (Defaults to 1.0.0)
-	 version: "1.8.6", // Added in 1.8.6
-
-	 // A short description to show on the mod line for this mod (Must be on a single line)
-	 short_description: "Generates a random hex color code",
+name: "Jump to Action",
 
 //---------------------------------------------------------------------
 // Action Section
@@ -40,19 +23,7 @@ section: "Other Stuff",
 //---------------------------------------------------------------------
 
 subtitle: function(data) {
-	return `Generates random hex color code`;
-},
-
-//---------------------------------------------------------------------
-// Action Storage Function
-//
-// Stores the relevant variable info for the editor.
-//---------------------------------------------------------------------
-
-variableStorage: function(data, varType) {
-	const type = parseInt(data.storage);
-	if(type !== varType) return;
-	return ([data.varName, 'Color Code']);
+	return `Jump to action ${typeof data.call === 'number' ? "#" : "" + data.call}`;
 },
 
 //---------------------------------------------------------------------
@@ -63,7 +34,7 @@ variableStorage: function(data, varType) {
 // are also the names of the fields stored in the action's JSON data.
 //---------------------------------------------------------------------
 
-fields: ["storage", "varName"],
+fields: ["call"],
 
 //---------------------------------------------------------------------
 // Command HTML
@@ -83,24 +54,18 @@ fields: ["storage", "varName"],
 
 html: function(isEvent, data) {
 	return `
-</div>
-		<p>
-			<u>Mod Info:</u><br>
-			Created by Jakob!
-		</p>
-	</div><br>
 <div>
-	<div style="float: left; width: 35%;">
-		Store In:<br>
-		<select id="storage" class="round" onchange="glob.variableChange(this, 'varNameContainer')">
-			${data.variables[0]}
-		</select>
+	<p>
+		<u>Mod Info:</u><br>
+		Created by Lasse!
+	</p>
+</div><br>
+<div>
+	<div id="varNameContainer" style="float: left; width: 60%;">
+		Jump to Action:<br>
+		<input id="call" class="round" type="number">
 	</div>
-	<div id="varNameContainer" style="display: none; float: right; width: 60%;">
-		Variable Name:<br>
-		<input id="varName" class="round" type="text">
-	</div>
-</div>`
+</div><br><br><br>`
 },
 
 //---------------------------------------------------------------------
@@ -111,11 +76,7 @@ html: function(isEvent, data) {
 // functions for the DOM elements.
 //---------------------------------------------------------------------
 
-init: function() {
-	const {glob, document} = this;
-
-	glob.variableChange(document.getElementById('storage'), 'varNameContainer');
-},
+init: function() {},
 
 //---------------------------------------------------------------------
 // Action Bot Function
@@ -127,12 +88,14 @@ init: function() {
 
 action: function(cache) {
 	const data = cache.actions[cache.index];
-	const type = parseInt(data.storage);
-	const varName = this.evalMessage(data.varName, cache);
-	const code = "000000".replace(/0/g,function(){return (~~(Math.random()*16)).toString(16);});
-	this.storeValue('#' + code, type, varName, cache);
-	this.callNextAction(cache);
+	const val = parseInt(this.evalMessage(data.call, cache));
+	const index = Math.max(val - 1, 0);
+	if(cache.actions[index]) {
+		cache.index = index - 1;
+		this.callNextAction(cache);
+	}
 },
+
 //---------------------------------------------------------------------
 // Action Bot Mod
 //
@@ -142,6 +105,7 @@ action: function(cache) {
 // functions you wish to overwrite.
 //---------------------------------------------------------------------
 
-mod: function(DBM) {}
+mod: function(DBM) {
+}
 
 }; // End of module

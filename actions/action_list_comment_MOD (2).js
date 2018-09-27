@@ -6,24 +6,7 @@ module.exports = {
 // This is the name of the action displayed in the editor.
 //---------------------------------------------------------------------
 
-name: "Generate Random Hex Color",
-
-
-//---------------------------------------------------------------------
-	 // DBM Mods Manager Variables (Optional but nice to have!)
-	 //
-	 // These are variables that DBM Mods Manager uses to show information
-	 // about the mods for people to see in the list.
-	 //---------------------------------------------------------------------
-
-	 // Who made the mod (If not set, defaults to "DBM Mods")
-	 author: "Jakob",
-
-	 // The version of the mod (Defaults to 1.0.0)
-	 version: "1.8.6", // Added in 1.8.6
-
-	 // A short description to show on the mod line for this mod (Must be on a single line)
-	 short_description: "Generates a random hex color code",
+name: "Comment",
 
 //---------------------------------------------------------------------
 // Action Section
@@ -34,25 +17,34 @@ name: "Generate Random Hex Color",
 section: "Other Stuff",
 
 //---------------------------------------------------------------------
+	 // DBM Mods Manager Variables (Optional but nice to have!)
+	 //
+	 // These are variables that DBM Mods Manager uses to show information
+	 // about the mods for people to see in the list.
+	 //---------------------------------------------------------------------
+
+	 // Who made the mod (If not set, defaults to "DBM Mods")
+	 author: "General Wrex",
+
+	 // The version of the mod (Defaults to 1.0.0)
+	 version: "1.8.2",
+
+	 // A short description to show on the mod line for this mod (Must be on a single line)
+	 short_description: "Adds a comment which you can see in the Mod Manager",
+
+	 // If it depends on any other mods by name, ex: WrexMODS if the mod uses something from WrexMods
+
+
+	 //---------------------------------------------------------------------
+
+//---------------------------------------------------------------------
 // Action Subtitle
 //
 // This function generates the subtitle displayed next to the name.
 //---------------------------------------------------------------------
 
 subtitle: function(data) {
-	return `Generates random hex color code`;
-},
-
-//---------------------------------------------------------------------
-// Action Storage Function
-//
-// Stores the relevant variable info for the editor.
-//---------------------------------------------------------------------
-
-variableStorage: function(data, varType) {
-	const type = parseInt(data.storage);
-	if(type !== varType) return;
-	return ([data.varName, 'Color Code']);
+	return '<font color="' + data.color +'">' + data.comment + '</font>';
 },
 
 //---------------------------------------------------------------------
@@ -63,7 +55,7 @@ variableStorage: function(data, varType) {
 // are also the names of the fields stored in the action's JSON data.
 //---------------------------------------------------------------------
 
-fields: ["storage", "varName"],
+fields: ["comment", "color"],
 
 //---------------------------------------------------------------------
 // Command HTML
@@ -83,24 +75,21 @@ fields: ["storage", "varName"],
 
 html: function(isEvent, data) {
 	return `
-</div>
+	<div>
 		<p>
 			<u>Mod Info:</u><br>
-			Created by Jakob!
+			Created by General Wrex!<br><br>
+			This will leave a comment in the right side of the action list where the action info is.<br>
+			It automatically calls the next action in the list.<br><br>
+			<b>This still counts as an Action, the action number still applies.</b>
 		</p>
 	</div><br>
-<div>
-	<div style="float: left; width: 35%;">
-		Store In:<br>
-		<select id="storage" class="round" onchange="glob.variableChange(this, 'varNameContainer')">
-			${data.variables[0]}
-		</select>
-	</div>
-	<div id="varNameContainer" style="display: none; float: right; width: 60%;">
-		Variable Name:<br>
-		<input id="varName" class="round" type="text">
-	</div>
-</div>`
+	<div style="float: left; width: 99%;">
+	    Text Color:<br>
+		<input type="color" id="color"><br>
+		Comment To Show: (Supports some HTML Tags)<br>
+		<input id="comment" class="round" type="text"><br>
+	</div>`
 },
 
 //---------------------------------------------------------------------
@@ -112,9 +101,6 @@ html: function(isEvent, data) {
 //---------------------------------------------------------------------
 
 init: function() {
-	const {glob, document} = this;
-
-	glob.variableChange(document.getElementById('storage'), 'varNameContainer');
 },
 
 //---------------------------------------------------------------------
@@ -126,13 +112,9 @@ init: function() {
 //---------------------------------------------------------------------
 
 action: function(cache) {
-	const data = cache.actions[cache.index];
-	const type = parseInt(data.storage);
-	const varName = this.evalMessage(data.varName, cache);
-	const code = "000000".replace(/0/g,function(){return (~~(Math.random()*16)).toString(16);});
-	this.storeValue('#' + code, type, varName, cache);
 	this.callNextAction(cache);
 },
+
 //---------------------------------------------------------------------
 // Action Bot Mod
 //
@@ -142,6 +124,7 @@ action: function(cache) {
 // functions you wish to overwrite.
 //---------------------------------------------------------------------
 
-mod: function(DBM) {}
+mod: function(DBM) {
+}
 
 }; // End of module

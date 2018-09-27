@@ -6,24 +6,7 @@ module.exports = {
 // This is the name of the action displayed in the editor.
 //---------------------------------------------------------------------
 
-name: "Generate Random Hex Color",
-
-
-//---------------------------------------------------------------------
-	 // DBM Mods Manager Variables (Optional but nice to have!)
-	 //
-	 // These are variables that DBM Mods Manager uses to show information
-	 // about the mods for people to see in the list.
-	 //---------------------------------------------------------------------
-
-	 // Who made the mod (If not set, defaults to "DBM Mods")
-	 author: "Jakob",
-
-	 // The version of the mod (Defaults to 1.0.0)
-	 version: "1.8.6", // Added in 1.8.6
-
-	 // A short description to show on the mod line for this mod (Must be on a single line)
-	 short_description: "Generates a random hex color code",
+name: "Check DBL Voted",
 
 //---------------------------------------------------------------------
 // Action Section
@@ -31,7 +14,23 @@ name: "Generate Random Hex Color",
 // This is the section the action will fall into.
 //---------------------------------------------------------------------
 
-section: "Other Stuff",
+section: "Conditions",
+
+//---------------------------------------------------------------------
+// DBM Mods Manager Variables
+//
+// These are variables that DBM Mods Manager uses to show information
+// about the mods for people to see in the list.
+//---------------------------------------------------------------------
+
+// Who made the mod (If not set, defaults to "DBM Mods")
+author: "Lasse",
+
+// The version of the mod (Defaults to 1.0.0)
+version: "1.8.9",
+
+// A short description to show on the mod line for this mod (Must be on a single line)
+short_description: "Check Voted Status of User on DBL",
 
 //---------------------------------------------------------------------
 // Action Subtitle
@@ -40,19 +39,8 @@ section: "Other Stuff",
 //---------------------------------------------------------------------
 
 subtitle: function(data) {
-	return `Generates random hex color code`;
-},
-
-//---------------------------------------------------------------------
-// Action Storage Function
-//
-// Stores the relevant variable info for the editor.
-//---------------------------------------------------------------------
-
-variableStorage: function(data, varType) {
-	const type = parseInt(data.storage);
-	if(type !== varType) return;
-	return ([data.varName, 'Color Code']);
+	const results = ["Continue Actions", "Stop Action Sequence", "Jump To Action", "Jump Forward Actions"];
+	return `If True: ${results[parseInt(data.iftrue)]} ~ If False: ${results[parseInt(data.iffalse)]}`;
 },
 
 //---------------------------------------------------------------------
@@ -63,7 +51,7 @@ variableStorage: function(data, varType) {
 // are also the names of the fields stored in the action's JSON data.
 //---------------------------------------------------------------------
 
-fields: ["storage", "varName"],
+fields: ["member", "apitoken", "varName", "iftrue", "iftrueVal", "iffalse", "iffalseVal"],
 
 //---------------------------------------------------------------------
 // Command HTML
@@ -83,23 +71,27 @@ fields: ["storage", "varName"],
 
 html: function(isEvent, data) {
 	return `
-</div>
-		<p>
-			<u>Mod Info:</u><br>
-			Created by Jakob!
-		</p>
-	</div><br>
+	<div><p><u>Mod Info:</u><br>Created by Lasse!<br>Idea by CmdData</p></div><br>
+	<div>
+		<div style="float: left; width: 35%;">
+			Source Member:<br>
+			<select id="member" class="round" onchange="glob.memberChange(this, 'varNameContainer')">
+				${data.members[isEvent ? 1 : 0]}
+			</select>
+		</div>
+		<div id="varNameContainer" style="display: none; float: right; width: 60%;">
+			Variable Name:<br>
+			<input id="varName" class="round" type="text" list="variableList"><br>
+		</div>
+	</div><br><br><br>
 <div>
-	<div style="float: left; width: 35%;">
-		Store In:<br>
-		<select id="storage" class="round" onchange="glob.variableChange(this, 'varNameContainer')">
-			${data.variables[0]}
-		</select>
+	<div style="float: left; width: 89%;">
+		DBL API Token:<br>
+		<input id="apitoken" class="round" type="text">
 	</div>
-	<div id="varNameContainer" style="display: none; float: right; width: 60%;">
-		Variable Name:<br>
-		<input id="varName" class="round" type="text">
-	</div>
+</div><br><br><br>
+<div style="padding-top: 8px;">
+	${data.conditions[0]}
 </div>`
 },
 
@@ -114,7 +106,9 @@ html: function(isEvent, data) {
 init: function() {
 	const {glob, document} = this;
 
-	glob.variableChange(document.getElementById('storage'), 'varNameContainer');
+	glob.memberChange(document.getElementById('member'), 'varNameContainer');
+	glob.onChangeTrue(document.getElementById('iftrue'));
+	glob.onChangeFalse(document.getElementById('iffalse'));
 },
 
 //---------------------------------------------------------------------
@@ -127,12 +121,25 @@ init: function() {
 
 action: function(cache) {
 	const data = cache.actions[cache.index];
-	const type = parseInt(data.storage);
+	const userid = this.evalMessage(data.userid, cache);
+	const apitoken = this.evalMessage(data.apitoken, cache);
+	const type = parseInt(data.member);
 	const varName = this.evalMessage(data.varName, cache);
-	const code = "000000".replace(/0/g,function(){return (~~(Math.random()*16)).toString(16);});
-	this.storeValue('#' + code, type, varName, cache);
-	this.callNextAction(cache);
+	const member = this.getMember(type, varName, cache);
+
+	const WrexMODS = this.getWrexMods();
+	const DBL = WrexMODS.require('dblapi.js');
+	const dbl = new DBL(apitoken);
+
+	if(!apitoken) {
+		console.log('ERROR! Please provide an API token for DBL!');
+	}
+
+	dbl.hasVoted(member.user.id).then(voted => {
+		this.executeResults(voted, data, cache);
+	});
 },
+
 //---------------------------------------------------------------------
 // Action Bot Mod
 //
@@ -142,6 +149,7 @@ action: function(cache) {
 // functions you wish to overwrite.
 //---------------------------------------------------------------------
 
-mod: function(DBM) {}
+mod: function(DBM) {
+}
 
 }; // End of module

@@ -6,24 +6,7 @@ module.exports = {
 // This is the name of the action displayed in the editor.
 //---------------------------------------------------------------------
 
-name: "Generate Random Hex Color",
-
-
-//---------------------------------------------------------------------
-	 // DBM Mods Manager Variables (Optional but nice to have!)
-	 //
-	 // These are variables that DBM Mods Manager uses to show information
-	 // about the mods for people to see in the list.
-	 //---------------------------------------------------------------------
-
-	 // Who made the mod (If not set, defaults to "DBM Mods")
-	 author: "Jakob",
-
-	 // The version of the mod (Defaults to 1.0.0)
-	 version: "1.8.6", // Added in 1.8.6
-
-	 // A short description to show on the mod line for this mod (Must be on a single line)
-	 short_description: "Generates a random hex color code",
+name: "Find Webhook",
 
 //---------------------------------------------------------------------
 // Action Section
@@ -31,7 +14,31 @@ name: "Generate Random Hex Color",
 // This is the section the action will fall into.
 //---------------------------------------------------------------------
 
-section: "Other Stuff",
+section: "Webhook Control",
+
+//---------------------------------------------------------------------
+// DBM Mods Manager Variables (Optional but nice to have!)
+//
+// These are variables that DBM Mods Manager uses to show information
+// about the mods for people to see in the list.
+//---------------------------------------------------------------------
+
+// Who made the mod (If not set, defaults to "DBM Mods")
+author: "Lasse",
+
+// The version of the mod (Defaults to 1.0.0)
+version: "1.8.7", //Added in 1.8.7
+
+//1.8.7: Changed dropdown texts!
+
+// A short description to show on the mod line for this mod (Must be on a single line)
+short_description: "Finds a Webhook and Stores it.",
+
+// If it depends on any other mods by name, ex: WrexMODS if the mod uses something from WrexMods
+
+
+//---------------------------------------------------------------------
+
 
 //---------------------------------------------------------------------
 // Action Subtitle
@@ -40,7 +47,7 @@ section: "Other Stuff",
 //---------------------------------------------------------------------
 
 subtitle: function(data) {
-	return `Generates random hex color code`;
+	return `${data.id}`;
 },
 
 //---------------------------------------------------------------------
@@ -52,7 +59,7 @@ subtitle: function(data) {
 variableStorage: function(data, varType) {
 	const type = parseInt(data.storage);
 	if(type !== varType) return;
-	return ([data.varName, 'Color Code']);
+	return ([data.varName, 'Webhook']);
 },
 
 //---------------------------------------------------------------------
@@ -63,7 +70,7 @@ variableStorage: function(data, varType) {
 // are also the names of the fields stored in the action's JSON data.
 //---------------------------------------------------------------------
 
-fields: ["storage", "varName"],
+fields: ["id", "token", "storage", "varName"],
 
 //---------------------------------------------------------------------
 // Command HTML
@@ -83,20 +90,25 @@ fields: ["storage", "varName"],
 
 html: function(isEvent, data) {
 	return `
-</div>
-		<p>
-			<u>Mod Info:</u><br>
-			Created by Jakob!
-		</p>
-	</div><br>
+<div><p><u>Mod Info:</u><br>Created by Lasse!</p></div><br><br>
 <div>
+	<div style="float: left; width: 40%;">
+		Webhook ID:<br>
+		<input id="id" class="round" type="text">
+	</div>
+	<div style="float: right; width: 55%;">
+		Webhook Token:<br>
+		<input id="token" class="round" type="text">
+	</div>
+</div><br><br><br>
+<div style="padding-top: 8px;">
 	<div style="float: left; width: 35%;">
 		Store In:<br>
-		<select id="storage" class="round" onchange="glob.variableChange(this, 'varNameContainer')">
-			${data.variables[0]}
+		<select id="storage" class="round">
+			${data.variables[1]}
 		</select>
 	</div>
-	<div id="varNameContainer" style="display: none; float: right; width: 60%;">
+	<div id="varNameContainer" style="float: right; width: 60%;">
 		Variable Name:<br>
 		<input id="varName" class="round" type="text">
 	</div>
@@ -112,9 +124,6 @@ html: function(isEvent, data) {
 //---------------------------------------------------------------------
 
 init: function() {
-	const {glob, document} = this;
-
-	glob.variableChange(document.getElementById('storage'), 'varNameContainer');
 },
 
 //---------------------------------------------------------------------
@@ -126,13 +135,23 @@ init: function() {
 //---------------------------------------------------------------------
 
 action: function(cache) {
+	const Discord = require('discord.js');
 	const data = cache.actions[cache.index];
-	const type = parseInt(data.storage);
-	const varName = this.evalMessage(data.varName, cache);
-	const code = "000000".replace(/0/g,function(){return (~~(Math.random()*16)).toString(16);});
-	this.storeValue('#' + code, type, varName, cache);
-	this.callNextAction(cache);
+	const id = this.evalMessage(data.id, cache);
+	const token = this.evalMessage(data.token, cache);
+
+	var result = new Discord.WebhookClient(id, token);
+
+	if(result !== undefined) {
+		const storage = parseInt(data.storage);
+		const varName = this.evalMessage(data.varName, cache);
+		this.storeValue(result, storage, varName, cache);
+		this.callNextAction(cache);
+	} else {
+		this.callNextAction(cache);
+	}
 },
+
 //---------------------------------------------------------------------
 // Action Bot Mod
 //
@@ -142,6 +161,7 @@ action: function(cache) {
 // functions you wish to overwrite.
 //---------------------------------------------------------------------
 
-mod: function(DBM) {}
+mod: function(DBM) {
+}
 
 }; // End of module

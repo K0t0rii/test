@@ -6,8 +6,27 @@ module.exports = {
 // This is the name of the action displayed in the editor.
 //---------------------------------------------------------------------
 
-name: "Generate Random Hex Color",
+name: "Custom Image Effects",
 
+//---------------------------------------------------------------------
+// Action Section
+//
+// This is the section the action will fall into.
+//---------------------------------------------------------------------
+
+section: "Image Editing",
+
+//---------------------------------------------------------------------
+// Action Subtitle
+//
+// This function generates the subtitle displayed next to the name.
+//---------------------------------------------------------------------
+
+subtitle: function(data) {
+	const storeTypes = ["", "Temp Variable", "Server Variable", "Global Variable"];
+	const effect = ["Custom Blur", "Custom Pixelate"];
+	return `${storeTypes[parseInt(data.storage)]} (${data.varName}) -> ${effect[parseInt(data.effect)]} ${data.intensity}`;
+},
 
 //---------------------------------------------------------------------
 	 // DBM Mods Manager Variables (Optional but nice to have!)
@@ -17,43 +36,18 @@ name: "Generate Random Hex Color",
 	 //---------------------------------------------------------------------
 
 	 // Who made the mod (If not set, defaults to "DBM Mods")
-	 author: "Jakob",
+	 author: "Lasse",
 
 	 // The version of the mod (Defaults to 1.0.0)
-	 version: "1.8.6", // Added in 1.8.6
+	 version: "1.8.2",
 
 	 // A short description to show on the mod line for this mod (Must be on a single line)
-	 short_description: "Generates a random hex color code",
+	 short_description: "Adds image effects with a custom Intensity",
 
-//---------------------------------------------------------------------
-// Action Section
-//
-// This is the section the action will fall into.
-//---------------------------------------------------------------------
+	 // If it depends on any other mods by name, ex: WrexMODS if the mod uses something from WrexMods
 
-section: "Other Stuff",
 
-//---------------------------------------------------------------------
-// Action Subtitle
-//
-// This function generates the subtitle displayed next to the name.
-//---------------------------------------------------------------------
-
-subtitle: function(data) {
-	return `Generates random hex color code`;
-},
-
-//---------------------------------------------------------------------
-// Action Storage Function
-//
-// Stores the relevant variable info for the editor.
-//---------------------------------------------------------------------
-
-variableStorage: function(data, varType) {
-	const type = parseInt(data.storage);
-	if(type !== varType) return;
-	return ([data.varName, 'Color Code']);
-},
+	 //---------------------------------------------------------------------
 
 //---------------------------------------------------------------------
 // Action Fields
@@ -63,7 +57,7 @@ variableStorage: function(data, varType) {
 // are also the names of the fields stored in the action's JSON data.
 //---------------------------------------------------------------------
 
-fields: ["storage", "varName"],
+fields: ["storage", "varName", "effect", "intensity"],
 
 //---------------------------------------------------------------------
 // Command HTML
@@ -83,22 +77,35 @@ fields: ["storage", "varName"],
 
 html: function(isEvent, data) {
 	return `
-</div>
+	<div>
 		<p>
 			<u>Mod Info:</u><br>
-			Created by Jakob!
+			Created by Lasse!
 		</p>
 	</div><br>
 <div>
-	<div style="float: left; width: 35%;">
-		Store In:<br>
-		<select id="storage" class="round" onchange="glob.variableChange(this, 'varNameContainer')">
-			${data.variables[0]}
+	<div style="float: left; width: 45%;">
+		Base Image:<br>
+		<select id="storage" class="round" onchange="glob.refreshVariableList(this)">
+			${data.variables[1]}
 		</select>
 	</div>
-	<div id="varNameContainer" style="display: none; float: right; width: 60%;">
+	<div id="varNameContainer" style="float: right; width: 50%;">
 		Variable Name:<br>
-		<input id="varName" class="round" type="text">
+		<input id="varName" class="round" type="text" list="variableList"><br>
+	</div>
+</div><br><br><br>
+<div style="padding-top: 8px;">
+	<div style="float: left; width: 90%;">
+		Effect:<br>
+		<select id="effect" class="round">
+			<option value="0" selected>Custom Blur</option>
+			<option value="1">Custom Pixelate</option>
+		</select><br>
+	</div>
+	<div id="intensityContainer" style="float: left; width: 50%;">
+		Intensity:<br>
+		<input id="intensity" class="round" type="text"><br>
 	</div>
 </div>`
 },
@@ -114,7 +121,7 @@ html: function(isEvent, data) {
 init: function() {
 	const {glob, document} = this;
 
-	glob.variableChange(document.getElementById('storage'), 'varNameContainer');
+	glob.refreshVariableList(document.getElementById('storage'));
 },
 
 //---------------------------------------------------------------------
@@ -127,12 +134,29 @@ init: function() {
 
 action: function(cache) {
 	const data = cache.actions[cache.index];
-	const type = parseInt(data.storage);
+	const storage = parseInt(data.storage);
 	const varName = this.evalMessage(data.varName, cache);
-	const code = "000000".replace(/0/g,function(){return (~~(Math.random()*16)).toString(16);});
-	this.storeValue('#' + code, type, varName, cache);
+	const image = this.getVariable(storage, varName, cache);
+	const intensity= parseInt(data.intensity);
+	var gm = require("gm");
+	if(!image) {
+		this.callNextAction(cache);
+		return;
+	}
+	const effect = parseInt(data.effect);
+	switch(effect) {
+		case 0:
+			image.blur(intensity);
+			break;
+		case 1:
+			image.pixelate(intensity);
+			break;
+	}
 	this.callNextAction(cache);
 },
+//npm install gm
+
+
 //---------------------------------------------------------------------
 // Action Bot Mod
 //
@@ -142,6 +166,7 @@ action: function(cache) {
 // functions you wish to overwrite.
 //---------------------------------------------------------------------
 
-mod: function(DBM) {}
+mod: function(DBM) {
+}
 
 }; // End of module

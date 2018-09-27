@@ -6,24 +6,7 @@ module.exports = {
 // This is the name of the action displayed in the editor.
 //---------------------------------------------------------------------
 
-name: "Generate Random Hex Color",
-
-
-//---------------------------------------------------------------------
-	 // DBM Mods Manager Variables (Optional but nice to have!)
-	 //
-	 // These are variables that DBM Mods Manager uses to show information
-	 // about the mods for people to see in the list.
-	 //---------------------------------------------------------------------
-
-	 // Who made the mod (If not set, defaults to "DBM Mods")
-	 author: "Jakob",
-
-	 // The version of the mod (Defaults to 1.0.0)
-	 version: "1.8.6", // Added in 1.8.6
-
-	 // A short description to show on the mod line for this mod (Must be on a single line)
-	 short_description: "Generates a random hex color code",
+name: "Find Member",
 
 //---------------------------------------------------------------------
 // Action Section
@@ -31,7 +14,7 @@ name: "Generate Random Hex Color",
 // This is the section the action will fall into.
 //---------------------------------------------------------------------
 
-section: "Other Stuff",
+section: "Member Control",
 
 //---------------------------------------------------------------------
 // Action Subtitle
@@ -40,9 +23,35 @@ section: "Other Stuff",
 //---------------------------------------------------------------------
 
 subtitle: function(data) {
-	return `Generates random hex color code`;
+	const info = ['Member ID', 'Member Username', 'Member Display Name', 'Member Color'];
+	return `Find Member by ${info[parseInt(data.info)]}`;
 },
 
+
+	//---------------------------------------------------------------------
+	 // DBM Mods Manager Variables (Optional but nice to have!)
+	 //
+	 // These are variables that DBM Mods Manager uses to show information
+	 // about the mods for people to see in the list.
+	 //---------------------------------------------------------------------
+
+	 // Who made the mod (If not set, defaults to "DBM Mods")
+	 author: "DBM & Lasse",
+
+	 // The version of the mod (Defaults to 1.0.0)
+	 version: "1.8.9", //Added in 1.8.9
+
+	 // A short description to show on the mod line for this mod (Must be on a single line)
+	 short_description: "Fixed.",
+
+	 // If it depends on any other mods by name, ex: WrexMODS if the mod uses something from WrexMods
+
+
+	 //---------------------------------------------------------------------
+
+
+	 
+	 
 //---------------------------------------------------------------------
 // Action Storage Function
 //
@@ -52,7 +61,7 @@ subtitle: function(data) {
 variableStorage: function(data, varType) {
 	const type = parseInt(data.storage);
 	if(type !== varType) return;
-	return ([data.varName, 'Color Code']);
+	return ([data.varName, 'Server Member']);
 },
 
 //---------------------------------------------------------------------
@@ -63,40 +72,49 @@ variableStorage: function(data, varType) {
 // are also the names of the fields stored in the action's JSON data.
 //---------------------------------------------------------------------
 
-fields: ["storage", "varName"],
+fields: ["info", "find", "storage", "varName"],
 
 //---------------------------------------------------------------------
 // Command HTML
 //
 // This function returns a string containing the HTML used for
-// editting actions.
+// editting actions. 
 //
 // The "isEvent" parameter will be true if this action is being used
-// for an event. Due to their nature, events lack certain information,
+// for an event. Due to their nature, events lack certain information, 
 // so edit the HTML to reflect this.
 //
-// The "data" parameter stores constants for select elements to use.
+// The "data" parameter stores constants for select elements to use. 
 // Each is an array: index 0 for commands, index 1 for events.
-// The names are: sendTargets, members, roles, channels,
+// The names are: sendTargets, members, roles, channels, 
 //                messages, servers, variables
 //---------------------------------------------------------------------
 
 html: function(isEvent, data) {
 	return `
-</div>
-		<p>
-			<u>Mod Info:</u><br>
-			Created by Jakob!
-		</p>
-	</div><br>
 <div>
-	<div style="float: left; width: 35%;">
-		Store In:<br>
-		<select id="storage" class="round" onchange="glob.variableChange(this, 'varNameContainer')">
-			${data.variables[0]}
+	<div style="float: left; width: 40%;">
+		Source Field:<br>
+		<select id="info" class="round">
+			<option value="0" selected>Member ID</option>
+			<option value="1">Member Username</option>
+			<option value="2">Member Display Name</option>
+			<option value="3">Member Color</option>
 		</select>
 	</div>
-	<div id="varNameContainer" style="display: none; float: right; width: 60%;">
+	<div style="float: right; width: 55%;">
+		Search Value:<br>
+		<input id="find" class="round" type="text">
+	</div>
+</div><br><br><br>
+<div style="padding-top: 8px;">
+	<div style="float: left; width: 35%;">
+		Store In:<br>
+		<select id="storage" class="round">
+			${data.variables[1]}
+		</select>
+	</div>
+	<div id="varNameContainer" style="float: right; width: 60%;">
 		Variable Name:<br>
 		<input id="varName" class="round" type="text">
 	</div>
@@ -112,27 +130,63 @@ html: function(isEvent, data) {
 //---------------------------------------------------------------------
 
 init: function() {
-	const {glob, document} = this;
-
-	glob.variableChange(document.getElementById('storage'), 'varNameContainer');
 },
 
 //---------------------------------------------------------------------
 // Action Bot Function
 //
 // This is the function for the action within the Bot's Action class.
-// Keep in mind event calls won't have access to the "msg" parameter,
+// Keep in mind event calls won't have access to the "msg" parameter, 
 // so be sure to provide checks for variable existance.
 //---------------------------------------------------------------------
 
 action: function(cache) {
+	const server = cache.server;
+	if(!server || !server.members) {
+		this.callNextAction(cache);
+		return;
+	}
 	const data = cache.actions[cache.index];
-	const type = parseInt(data.storage);
-	const varName = this.evalMessage(data.varName, cache);
-	const code = "000000".replace(/0/g,function(){return (~~(Math.random()*16)).toString(16);});
-	this.storeValue('#' + code, type, varName, cache);
-	this.callNextAction(cache);
+	const info = parseInt(data.info);
+	const find = this.evalMessage(data.find, cache);
+	
+	//DBM Mods ~ Lasse
+	//Checks if server is large and caches all users to verify that offline users are tracked.
+	if(server.large == true) {
+		server.fetchMembers();
+	}
+	//End
+	
+	let result;
+	switch(info) {
+		case 0:
+			result = server.members.find('id', find);
+			break;
+		case 1:
+			result = server.members.find(function(mem) {
+				return mem.user ? mem.user.username === find : false;
+			});
+			break;
+		case 2:
+			result = server.members.find('displayName', find);
+			break;
+		case 3:
+			result = server.members.find('displayColor', find);
+			break;
+		default:
+			break;
+	}
+	
+	if(result !== undefined) {
+		const storage = parseInt(data.storage);
+		const varName = this.evalMessage(data.varName, cache);
+		this.storeValue(result, storage, varName, cache);
+		this.callNextAction(cache);
+	} else {
+		this.callNextAction(cache);
+	}
 },
+
 //---------------------------------------------------------------------
 // Action Bot Mod
 //
@@ -142,6 +196,7 @@ action: function(cache) {
 // functions you wish to overwrite.
 //---------------------------------------------------------------------
 
-mod: function(DBM) {}
+mod: function(DBM) {
+}
 
 }; // End of module
